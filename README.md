@@ -61,16 +61,11 @@ pip install zstandard lzma
 
 ---
 
-## Datasets
-
-GoDe is evaluated on the standard 3DGS benchmarks:
-
 | Dataset | Link |
 |---|---|
 | Mip-NeRF 360 | [jonbarron.info/mipnerf360](https://jonbarron.info/mipnerf360) |
-| Tanks & Temples | [tanksandtemples.org](https://www.tanksandtemples.org) |
-| Deep Blending | [github.com/Phog/DeepBlending](https://github.com/Phog/DeepBlending) |
-
+| Tanks & Temples + Deep Blending | [repo-sam.inria.fr (tandt_db.zip)](https://repo-sam.inria.fr/fungraph/3d-gaussian-splatting/datasets/input/tandt_db.zip) |
+ 
 ---
 
 ## Usage
