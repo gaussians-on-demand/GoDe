@@ -124,7 +124,7 @@ python3 scalable_train.py \
 - `--max` — fraction of total Gaussians at LoD L−1 (finest level)
 - `--pretrained_dir` — path to the baseline checkpoint from Step 1
 - `--model_path` — output directory for the GoDe multi-level model
-- `--G` — number of GPUs
+- `--G` — upsampling bias for level sampling during fine-tuning; higher values increase the probability of sampling higher LoD levels
 - `--iterations` — number of fine-tuning iterations
 
 The output contains **all 8 levels** from a single training run. Each level can be decoded independently at render time.
