@@ -42,7 +42,7 @@ GoDe operates in three stages after training:
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/your-username/GoDe.git
+git clone https://github.com/gaussians-on-demand/GoDe.git
 cd GoDe
 ```
 
