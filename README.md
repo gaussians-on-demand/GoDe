@@ -21,8 +21,6 @@
 
 ![One hierarchical GoDe model of bicycle decoded at levels 0, 1, 2 and 7](assets/teaser.png)
 
-<p align="center"><sub>Numbers from the paper: GoDe with 3DGS-MCMC, Mip-NeRF 360 averages per level of detail (FPS on an NVIDIA A40).</sub></p>
-
 GoDe turns a trained splat-based radiance field into **one progressive, compressed file**: any prefix of it decodes
 to a complete model, from a few MB up to full quality. The same code runs on five backbones.
 
