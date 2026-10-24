@@ -67,7 +67,7 @@ python scalable_train.py --config config/scaffoldgs/lod_model.yaml \
   --source_path $DATA_ROOT/nerf_real_360/bicycle \
   --model_path output/gode/bicycle \
   --checkpoint output/bicycle/point_cloud/iteration_40000 \
-  --num_levels 8 --hier_min 50000 --sample_level_ratio 1.1 \
+  --num_levels 8 --hier_min 100000 --sample_level_ratio 1.1 \
   --ft_iterations 30000 --save_images
 ```
 

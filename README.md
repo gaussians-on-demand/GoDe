@@ -91,7 +91,7 @@ python train.py --config configs/bonsai.json --eval --images images_2 \
 python scalable_train.py --config configs/bonsai.json --images images_2 \
   -s $DATA_ROOT/nerf_real_360/bonsai -m output/gode/bonsai \
   --checkpoint output/bonsai/point_cloud/iteration_30000/point_cloud.ply \
-  --num_levels 8 --hier_min 150000 --sample_level_ratio 1.1 \
+  --num_levels 8 --hier_min 300000 --sample_level_ratio 1.1 \
   --ft_iterations 30000 --save_images
 ```
 
@@ -105,7 +105,7 @@ python train.py --eval --images images_2 \
 python scalable_train.py --images images_2 \
   -s $DATA_ROOT/nerf_real_360/bonsai -m output/gode/bonsai \
   --checkpoint output/bonsai/point_cloud/iteration_30000 \
-  --num_levels 8 --hier_min 50000 --sample_level_ratio 1.1 \
+  --num_levels 8 --hier_min 100000 --sample_level_ratio 1.1 \
   --ft_iterations 30000 --save_images
 ```
 </details>
@@ -122,7 +122,7 @@ python scalable_train.py --config config/scaffoldgs/lod_model.yaml \
   --source_path $DATA_ROOT/nerf_real_360/bicycle \
   --model_path output/gode/bicycle \
   --checkpoint output/bicycle/point_cloud/iteration_40000 \
-  --num_levels 8 --hier_min 50000 --sample_level_ratio 1.1 \
+  --num_levels 8 --hier_min 100000 --sample_level_ratio 1.1 \
   --ft_iterations 30000 --save_images
 ```
 
@@ -139,7 +139,7 @@ python train.py --config config/indoor.json --scene bonsai --eval \
 python scalable_train.py --config config/indoor.json --scene bonsai --eval \
   -s $DATA_ROOT/nerf_real_360/bonsai -m output/gode/bonsai \
   --checkpoint output/bonsai/point_cloud/iteration_30000 \
-  --num_levels 8 --hier_min 150000 --sample_level_ratio 1.1 \
+  --num_levels 8 --hier_min 300000 --sample_level_ratio 1.1 \
   --ft_iterations 30000 --save_images
 ```
 </details>
@@ -156,7 +156,7 @@ python scalable_train.py --config config/indoor.json --scene bonsai \
   -s $DATA_ROOT/nerf_real_360/bonsai -m output/gode/bonsai \
   --checkpoint output/bonsai/point_cloud/iteration_30000/point_cloud.ply \
   --color_rep voronoi --num_lobes 7 \
-  --num_levels 8 --hier_min 150000 --sample_level_ratio 1.1 \
+  --num_levels 8 --hier_min 300000 --sample_level_ratio 1.1 \
   --ft_iterations 30000 --save_images
 ```
 </details>

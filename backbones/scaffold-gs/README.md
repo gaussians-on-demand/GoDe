@@ -59,7 +59,7 @@ python train.py --eval --images images_2 \
 python scalable_train.py --images images_2 \
   -s $DATA_ROOT/nerf_real_360/bonsai -m output/gode/bonsai \
   --checkpoint output/bonsai/point_cloud/iteration_30000 \
-  --num_levels 8 --hier_min 50000 --sample_level_ratio 1.1 \
+  --num_levels 8 --hier_min 100000 --sample_level_ratio 1.1 \
   --ft_iterations 30000 --save_images
 ```
 

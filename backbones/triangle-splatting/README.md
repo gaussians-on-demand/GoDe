@@ -56,7 +56,7 @@ python scalable_train.py \
   --config config/indoor.json --scene bonsai --eval \
   -s $DATA_ROOT/nerf_real_360/bonsai -m output/gode/bonsai \
   --checkpoint output/bonsai/point_cloud/iteration_30000 \
-  --num_levels 8 --hier_min 150000 --sample_level_ratio 1.1 \
+  --num_levels 8 --hier_min 300000 --sample_level_ratio 1.1 \
   --ft_iterations 30000 --save_images
 ```
 

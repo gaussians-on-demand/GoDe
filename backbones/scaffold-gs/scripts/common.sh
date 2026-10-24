@@ -13,10 +13,15 @@ SCAFFOLD_ARGS="${SCAFFOLD_ARGS:-}"
 
 # Hierarchy settings used for the results in the paper.
 NUM_LEVELS="${NUM_LEVELS:-8}"
-HIER_MIN="${HIER_MIN:-50000}"
 SAMPLE_LEVEL_RATIO="${SAMPLE_LEVEL_RATIO:-1.1}"
 FT_ITERATIONS="${FT_ITERATIONS:-30000}"
 LOAD_ITER="${LOAD_ITER:-30000}"
+
+# Lower bound of the hierarchy (n_min, Sec. S2.3 of the paper): 100k anchors on Mip-NeRF 360,
+# Tanks & Temples and Deep Blending. Setting HIER_MIN overrides it.
+hier_min() {
+    echo 100000
+}
 
 # train <scene> <dataset-dir> [extra args...]
 train() {
@@ -32,7 +37,7 @@ scalable() {
     python3 "$REPO/scalable_train.py" \
         -s "$DATA_ROOT/$data/$scene" -m "$OUT_ROOT/gode/$scene" \
         --checkpoint "$OUT_ROOT/$scene/point_cloud/iteration_$LOAD_ITER" \
-        --num_levels "$NUM_LEVELS" --hier_min "$HIER_MIN" \
+        --num_levels "$NUM_LEVELS" --hier_min "${HIER_MIN:-$(hier_min "$data")}" \
         --sample_level_ratio "$SAMPLE_LEVEL_RATIO" \
         --ft_iterations "$FT_ITERATIONS" --save_images \
         $SCAFFOLD_ARGS "$@"
