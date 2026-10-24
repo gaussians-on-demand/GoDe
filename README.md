@@ -21,97 +21,50 @@
 
 ![One hierarchical GoDe model of bicycle decoded at levels 0, 1, 2 and 7](assets/teaser.png)
 
-<p align="center"><sub>One hierarchical 3DGS-MCMC model of <i>bicycle</i>: each level of detail adds a layer of primitives and is
-decoded from a longer prefix of the same compressed file. PSNR on the test views; FPS of this view at 1080p on an NVIDIA A40.</sub></p>
-
-GoDe turns a trained splat-based radiance field into **one progressive, compressed bitstream**. It ranks the
-primitives by gradient importance into nested levels of detail, fine-tunes all levels at once with
-quantization-aware training, and stores a base layer and enhancement layers as chunks compressed with shared
-Zstandard dictionaries. Any prefix of the file decodes to a complete model: one model covers the whole
-rate–distortion range, with no retraining per rate, and the same method runs unchanged on Gaussians, triangles,
-neural anchors, octrees and Beta kernels.
-
-## Highlights
-
-- **One model, every rate.** On *bicycle*, a single 3DGS-MCMC model goes from 6.1 MB (level 0) to 101.5 MB
-  (level 7); the model it starts from is 1.44 GB uncompressed.
-- **Backbone-agnostic.** The same core runs on five backbones — 3DGS-MCMC, Scaffold-GS, Octree-GS, Triangle
-  Splatting and Spherical Voronoi — without modifying them.
-- **Fast progressive decoding.** Decoding a whole Mip-NeRF 360 scene, every level included, takes 0.5–1.3 s,
-  against 9–88 s for single-rate codecs and 42–52 s for the progressive PCGS.
-- **Competitive quality.** Rate–distortion on par with single-rate codecs, which train a separate model for every
-  rate.
+GoDe turns a trained splat-based radiance field into **one progressive, compressed file**: any prefix of it decodes
+to a complete model, from a few MB up to full quality. The same code runs on five backbones.
 
 ## Method
 
 ![The GoDe pipeline](assets/pipeline.png)
 
-1. **Hierarchy of splats.** Primitives are ranked by their accumulated gradients and the least important are
-   masked out level by level, recomputing the gradients after every step. Every level is a subset of the next:
-   a base layer 𝒢₀ and enhancement layers ℰ₁ … ℰ_{L−1}. Building eight levels takes 1–2 minutes.
-2. **One quantization-aware fine-tuning.** All levels share one set of parameters. Each iteration samples a level
-   and a view and renders that level with simulated quantization (float16 geometry, int8 appearance), so the cost
-   does not grow with the number of levels.
-3. **Progressive coding.** Each layer is a chunk compressed with shared Zstandard dictionaries. Decoding a level
-   means decoding and concatenating its chunks; an opacity ramp makes switching between levels smooth.
+1. **Hierarchy.** Primitives are ranked by accumulated gradients and masked out level by level: a base layer 𝒢₀ and
+   enhancement layers ℰ₁ … ℰ_{L−1}, each level a subset of the next.
+2. **One fine-tuning.** All levels share one set of parameters; each iteration samples a level and renders it with
+   simulated quantization (float16 geometry, int8 appearance).
+3. **Progressive coding.** Each layer is a chunk compressed with shared Zstandard dictionaries; a level is decoded by
+   concatenating its chunks.
 
-## Results
-
-**Levels on Mip-NeRF 360** — coarsest and finest of the eight levels, dataset averages (supplementary Table S7;
-FPS on an NVIDIA A40):
-
-| Backbone | Level 0: PSNR · size · FPS | Level 7: PSNR · size · FPS |
-|---|---|---|
-| 3DGS-MCMC | 26.97 dB · 11.3 MB · 270 | 27.69 dB · 61.5 MB · 122 |
-| Scaffold-GS | 27.29 dB · 9.8 MB · 104 | 27.93 dB · 41.6 MB · 68 |
-| Octree-GS | 26.75 dB · 11.2 MB · 66 | 27.84 dB · 36.2 MB · 33 |
-| Triangle Splatting | 24.68 dB · 9.8 MB · 203 | 26.42 dB · 87.9 MB · 57 |
-| Spherical Voronoi | 27.53 dB · 10.0 MB · 213 | 28.38 dB · 65.3 MB · 80 |
-
-**Training and decoding time** on Mip-NeRF 360 (paper, Table 3). Single-rate codecs train once per rate; GoDe
-trains once for all of them. Decoding is in seconds at the low / medium / high operating points.
-
-| Method | Progressive | Training, all rates (h) | Decoding (s) |
-|---|:-:|:-:|:-:|
-| Context-GS | | 4.0 | 53.1 / 82.5 / 88.1 |
-| HAC++ | | 3.9 | 12.3 / 13.4 / 19.0 |
-| RDO | | 3.9 | 2.2 / 7.4 / 19.0 |
-| Comp-GS | | 4.9 | 9.1 / 9.0 / 8.8 |
-| PCGS | ✓ | 1.8 | 42.3 / 46.3 / 52.1 |
-| **GoDe (3DGS)** | ✓ | **1.1** | **0.6 / 0.9 / 1.3** |
-| **GoDe (Scaffold-GS)** | ✓ | **0.6** | **0.2 / 0.3 / 0.5** |
-
-## Repository layout
-
-| Path | Contents |
-|---|---|
-| [`gode/`](gode) | The method: hierarchy, quantization-aware fine-tuning, progressive coding, metrics. No backbone code; its tests run on CPU. |
-| [`backbones/3dgs-mcmc`](backbones/3dgs-mcmc) | 3D Gaussians trained with MCMC, spherical-harmonics colour |
-| [`backbones/scaffold-gs`](backbones/scaffold-gs) | Scaffold-GS, neural anchors |
-| [`backbones/octree-gs`](backbones/octree-gs) | Octree-GS, anchors in a level-of-detail octree |
-| [`backbones/triangle-splatting`](backbones/triangle-splatting) | Triangle Splatting |
-| [`backbones/spherical-voronoi`](backbones/spherical-voronoi) | Beta kernels with Spherical Voronoi colour |
-
-Each backbone is the code used for the paper, CUDA rasterizers included, so nothing is fetched from other
-repositories. Each one has its own README (installation, data, training, evaluation), the licence of the project it
-derives from, an `UPSTREAM.md` saying where it comes from and what changed, and a pinned `requirements.txt`
-(Python 3.10, PyTorch 2.5.1, CUDA 12.1). Its `gode/` is a link to the shared core.
-
-## Getting started
-
-**1. Clone, and pick a backbone.** Backbones need separate environments (Octree-GS needs the stock `gsplat`,
-Spherical Voronoi the Beta Splatting variant); each README gives the exact commands.
+## Installation
 
 ```shell
 git clone https://github.com/gaussians-on-demand/GoDe.git
-cd GoDe/backbones/3dgs-mcmc
-conda create -y -n gode-mcmc python=3.10 && conda activate gode-mcmc
-pip install torch==2.5.1 torchvision==0.20.1 --index-url https://download.pytorch.org/whl/cu121
-pip install -r requirements.txt
-pip install submodules/diff-gaussian-rasterization submodules/simple-knn
+cd GoDe/backbones/<backbone>
 ```
 
-**2. Get the data.** The standard benchmarks, in COLMAP layout:
+Each backbone has its own environment (Python 3.10, PyTorch 2.5.1, CUDA 12.1) and ships its CUDA rasterizers in
+`submodules/`; nothing else is downloaded. The common part:
+
+```shell
+conda create -y -n gode-<backbone> python=3.10 && conda activate gode-<backbone>
+pip install torch==2.5.1 torchvision==0.20.1 --index-url https://download.pytorch.org/whl/cu121
+pip install -r requirements.txt
+```
+
+then, from the backbone's folder:
+
+| Backbone | Folder | Then run |
+|---|---|---|
+| 3DGS-MCMC | [`backbones/3dgs-mcmc`](backbones/3dgs-mcmc) | `pip install submodules/diff-gaussian-rasterization submodules/simple-knn` |
+| Scaffold-GS | [`backbones/scaffold-gs`](backbones/scaffold-gs) | `pip install torch-scatter==2.1.2 -f https://data.pyg.org/whl/torch-2.4.0+cu121.html`<br>`pip install submodules/scaffold-diff-gaussian-rasterization submodules/simple-knn` |
+| Octree-GS | [`backbones/octree-gs`](backbones/octree-gs) | `pip install torch-scatter==2.1.2 -f https://data.pyg.org/whl/torch-2.4.0+cu121.html` |
+| Triangle Splatting | [`backbones/triangle-splatting`](backbones/triangle-splatting) | `pip install submodules/diff-triangle-rasterization submodules/simple-knn` |
+| Spherical Voronoi | [`backbones/spherical-voronoi`](backbones/spherical-voronoi) | `pip install -e .`<br>`pip install -e submodules`<br>`pip install -e submodules/spherical-voronoi` |
+
+Octree-GS needs the stock `gsplat` and Spherical Voronoi its Beta-kernel variant, so keep them in separate
+environments.
+
+## Data
 
 | Dataset | Download |
 |---|---|
@@ -124,8 +77,12 @@ $DATA_ROOT/tandt/{train,truck}
 $DATA_ROOT/db/{drjohnson,playroom}
 ```
 
-**3. Run GoDe** in two stages: train the backbone (or bring your own checkpoint), then build and compress the
-hierarchy.
+Mip-NeRF 360 indoor scenes use `images_2`, outdoor ones `images_4`.
+
+## Running GoDe
+
+Two stages, from the backbone's folder: **train** the backbone (or bring your own checkpoint), then **build and
+compress** the hierarchy with `scalable_train.py`. For example, with 3DGS-MCMC on *bonsai*:
 
 ```shell
 python train.py --config configs/bonsai.json --eval --images images_2 \
@@ -138,35 +95,104 @@ python scalable_train.py --config configs/bonsai.json --images images_2 \
   --ft_iterations 30000 --save_images
 ```
 
-The output holds the compressed chunks `lod_0.zst … lod_7.zst` with their shared dictionary, and
-`scalable_results.csv` with PSNR, SSIM, LPIPS, primitives, size, FPS and decoding time for every level.
-Each backbone's README shows how to run whole benchmarks, and `tools/make_results_table.py` aggregates the results.
-
-The core's tests need neither a GPU nor a dataset:
+<details>
+<summary><b>Scaffold-GS</b></summary>
 
 ```shell
-pytest gode/tests
+python train.py --eval --images images_2 \
+  -s $DATA_ROOT/nerf_real_360/bonsai -m output/bonsai
+
+python scalable_train.py --images images_2 \
+  -s $DATA_ROOT/nerf_real_360/bonsai -m output/gode/bonsai \
+  --checkpoint output/bonsai/point_cloud/iteration_30000 \
+  --num_levels 8 --hier_min 50000 --sample_level_ratio 1.1 \
+  --ft_iterations 30000 --save_images
 ```
+</details>
+
+<details>
+<summary><b>Octree-GS</b></summary>
+
+```shell
+python train.py --config config/scaffoldgs/lod_model.yaml \
+  --source_path $DATA_ROOT/nerf_real_360/bicycle \
+  --scene_name bicycle --dataset_name mipnerf360
+
+python scalable_train.py --config config/scaffoldgs/lod_model.yaml \
+  --source_path $DATA_ROOT/nerf_real_360/bicycle \
+  --model_path output/gode/bicycle \
+  --checkpoint output/bicycle/point_cloud/iteration_40000 \
+  --num_levels 8 --hier_min 50000 --sample_level_ratio 1.1 \
+  --ft_iterations 30000 --save_images
+```
+
+The checkpoint directory holds `point_cloud.ply` and the MLP checkpoints, which every level shares.
+</details>
+
+<details>
+<summary><b>Triangle Splatting</b></summary>
+
+```shell
+python train.py --config config/indoor.json --scene bonsai --eval \
+  -s $DATA_ROOT/nerf_real_360/bonsai -m output/bonsai
+
+python scalable_train.py --config config/indoor.json --scene bonsai --eval \
+  -s $DATA_ROOT/nerf_real_360/bonsai -m output/gode/bonsai \
+  --checkpoint output/bonsai/point_cloud/iteration_30000 \
+  --num_levels 8 --hier_min 150000 --sample_level_ratio 1.1 \
+  --ft_iterations 30000 --save_images
+```
+</details>
+
+<details>
+<summary><b>Spherical Voronoi</b></summary>
+
+```shell
+python train.py --config config/indoor.json --scene bonsai \
+  -s $DATA_ROOT/nerf_real_360/bonsai -m output/bonsai \
+  --color_rep voronoi --num_lobes 7
+
+python scalable_train.py --config config/indoor.json --scene bonsai \
+  -s $DATA_ROOT/nerf_real_360/bonsai -m output/gode/bonsai \
+  --checkpoint output/bonsai/point_cloud/iteration_30000/point_cloud.ply \
+  --color_rep voronoi --num_lobes 7 \
+  --num_levels 8 --hier_min 150000 --sample_level_ratio 1.1 \
+  --ft_iterations 30000 --save_images
+```
+</details>
+
+**Whole benchmarks** (every backbone except Octree-GS ships these scripts):
+
+```shell
+DATA_ROOT=/path/to/datasets scripts/train_mipnerf360.sh      # stage 1
+DATA_ROOT=/path/to/datasets scripts/scalable_mipnerf360.sh   # stage 2
+python tools/make_results_table.py --run_root output/gode    # one table, per scene and per dataset
+```
+
+**Main options of `scalable_train.py`:** `--num_levels` (levels in the file), `--hier_min` (size of the coarsest
+level), `--sample_level_ratio` (level sampling during fine-tuning: `1` uniform, `>1` favours fine levels),
+`--ft_iterations`, `--save_images`. Each backbone's README lists them all, with the ablations.
+
+**Output:**
+
+```
+output/gode/<scene>/
+├── masks.pt                      level masks
+├── scalable_results.csv          PSNR, SSIM, LPIPS, primitives, size, FPS and decoding time, per level
+└── iter_30000/
+    ├── zstd_dict.pkl             dictionary shared by every chunk
+    ├── lod_0.zst ... lod_7.zst   the chunks, coarsest first
+    └── renders/lod_*/            decoded test renders (--save_images)
+```
+
+The core's tests need neither a GPU nor a dataset: `pytest gode/tests`, from the repository root.
 
 ## Adding a backbone
 
-`gode/` never touches primitives directly. A backbone is any model exposing:
-
-| Group | Methods |
-|---|---|
-| Rendering | `render(camera, mask=None, measure_fps=False)` returning `{"render": ...}` |
-| Optimisation | `training_setup(args)`, `update_learning_rate(it)`, `optimizer`, `train()`, `eval()` |
-| Primitives | `num_primitives`, `primitive_names()`, `index_primitives(idx)`, `subset(mask)`, `append_primitives(other)`, `clone_empty()` |
-| Importance | `_get_gradient_scores()`, `gradient_prune(k, prune_type, scores)` |
-| Objective | `photometric_loss(image, gt, lambda_dssim)`, `appearance_regularization(mask, weight)`, `geometry_groups()` |
-| Compression | `_sort_morton()`, `set_qa()`, `quantizer_names()`, `calibrate_quantizers_for_compression()`, `encode_payload(quantize)`, `decode_payload(payload)` |
-
-`encode_payload` returns `{"geom": {...}, "features": {...}}`, where arrays are numpy and everything else is
-metadata; `gode/streams.py` handles dictionary training, the container format and incremental decoding. Adding a
-backbone therefore means implementing these methods on its model class and pointing a copy of `scalable_train.py`
-at it: the hierarchy, the fine-tuning schedule and the codec stay the same. See
-[`backbones/spherical-voronoi/scene/beta_model.py`](backbones/spherical-voronoi/scene/beta_model.py) for a reference
-implementation.
+`gode/` never touches primitives directly: implement its interface (rendering, primitive indexing, gradient scores,
+loss, `encode_payload` / `decode_payload`) on your model class and point a copy of `scalable_train.py` at it. The
+full list is in [`backbones/spherical-voronoi/README.md`](backbones/spherical-voronoi/README.md#porting-gode-to-another-backbone);
+[`scene/beta_model.py`](backbones/spherical-voronoi/scene/beta_model.py) is a reference implementation.
 
 ## Citation
 
@@ -180,21 +206,14 @@ implementation.
 }
 ```
 
-## Acknowledgements
+## License and acknowledgements
 
-GoDe builds on the code of
-[3D Gaussian Splatting](https://github.com/graphdeco-inria/gaussian-splatting),
-[3DGS-MCMC](https://github.com/ubc-vision/3dgs-mcmc),
-[Scaffold-GS](https://github.com/city-super/Scaffold-GS),
+The core (`gode/`) is MIT-licensed. Each backbone keeps the licence of the project it derives from — see the licence
+files and `UPSTREAM.md` in its folder; several are under the Gaussian-Splatting License (research use only). GoDe
+builds on [3D Gaussian Splatting](https://github.com/graphdeco-inria/gaussian-splatting),
+[3DGS-MCMC](https://github.com/ubc-vision/3dgs-mcmc), [Scaffold-GS](https://github.com/city-super/Scaffold-GS),
 [Octree-GS](https://github.com/city-super/Octree-AnyGS),
 [Triangle Splatting](https://github.com/trianglesplatting/triangle-splatting),
 [Beta Splatting](https://github.com/RongLiu-Leo/beta-splatting),
 [Spherical Voronoi](https://github.com/sphericalvoronoi/sphericalvoronoi),
-[gsplat](https://github.com/nerfstudio-project/gsplat) and
-[lpips-pytorch](https://github.com/S-aiueo32/lpips-pytorch). We thank their authors for releasing them.
-
-## License
-
-The GoDe core (`gode/`) is released under the [MIT licence](LICENSE). Each folder under `backbones/` keeps the
-licence of the project it derives from (see the licence files and `UPSTREAM.md` in each folder); several of them
-are under the Gaussian-Splatting License, which allows research and evaluation use only.
+[gsplat](https://github.com/nerfstudio-project/gsplat) and [lpips-pytorch](https://github.com/S-aiueo32/lpips-pytorch).
