@@ -1,0 +1,7 @@
+numpy==1.26.4
+pillow==11.3.0
+plyfile==1.1.3
+opencv-python==4.11.0.86
+lpips==0.1.4
+tqdm==4.67.3
+zstandard==0.25.0
